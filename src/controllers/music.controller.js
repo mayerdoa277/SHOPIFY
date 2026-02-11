@@ -1,5 +1,4 @@
 import musicModel from "../models/music.model.js";
-import userModel from "../models/user.model.js";
 import { uploadQueue } from "../config/queue.js";
 
 const createMusic = async (req, res) => {
@@ -58,10 +57,6 @@ const createMusic = async (req, res) => {
  */
 const uploadMusic = async (req, res) => {
     try {
-        console.log("[uploadMusic] Incoming request");
-        console.log("[uploadMusic] req.body:", req.body);
-        console.log("[uploadMusic] req.files keys:", Object.keys(req.files || {}));
-
         const musicFile = req.files?.music?.[0];
         const imageFile = req.files?.image?.[0];
         const { title, album } = req.body;
@@ -88,19 +83,34 @@ const uploadMusic = async (req, res) => {
             });
         }
 
-        const user = req.body.userId || req.user?._id || null;
-        console.log("[uploadMusic] Resolved user ID:", user);
+        // const user = req.body.userId || req.user?._id || null;
 
         // Add job to queue for background processing
-        console.log("[uploadMusic] Adding job to uploadQueue...");
+        // Convert buffers to base64 strings for BullMQ serialization
+        const musicBufferBase64 = musicFile.buffer.toString('base64');
+        const imageBufferBase64 = imageFile.buffer.toString('base64');
+        
+        // Get userId from JWT token (could be _id or id or userId)
+        const userId = req.user?._id || req.user?.id || req.user?.userId || null;
+        
+        console.log(`Adding upload job to queue for user ${userId}, title: ${title}`);
+        console.log(`req.user structure:`, JSON.stringify(req.user, null, 2));
+        
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "User ID not found in token",
+            });
+        }
+        
         const job = await uploadQueue.add(
             "uploadMusicJob",
             {
-                musicBuffer: musicFile.buffer,
+                musicBuffer: musicBufferBase64,
                 musicName: musicFile.originalname,
-                imageBuffer: imageFile.buffer,
+                imageBuffer: imageBufferBase64,
                 imageName: imageFile.originalname,
-                userId: user,
+                userId: userId.toString(),
                 title,
                 album: album || null,
             },
@@ -109,7 +119,8 @@ const uploadMusic = async (req, res) => {
                 priority: 1,
             }
         );
-        console.log("[uploadMusic] Job added to queue with ID:", job.id);
+
+        console.log(`Job ${job.id} added to queue successfully`);
 
         res.status(202).json({
             success: true,
@@ -124,6 +135,8 @@ const uploadMusic = async (req, res) => {
         });
     }
 };
+
+const c = async (req, res) => {};
 
 export {
     createMusic,

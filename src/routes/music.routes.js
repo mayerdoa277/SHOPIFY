@@ -1,7 +1,7 @@
 import express from "express";
 import { upload } from "../config/multer.config.js";
 import { uploadMusic } from "../controllers/music.controller.js";
-// import { authUser, authArtist } from "../middleware/auth.js";
+import { artistAuth } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
@@ -17,6 +17,7 @@ const router = express.Router();
  */
 router.post(
     "/upload",
+    artistAuth,
     upload.fields([
         { name: "music", maxCount: 1 },
         { name: "image", maxCount: 1 },

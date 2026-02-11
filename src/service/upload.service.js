@@ -1,9 +1,11 @@
+import { toFile } from "@imagekit/nodejs";
 import imagekit from "../config/imagekit.config.js";
 import { ensureTempDir, generateFileName, saveTempFile } from "../utils/file.utils.js";
 import { scanFile } from "../utils/virus-scan.utils.js";
 
 /**
  * Upload file to ImageKit with virus scanning and temp backup
+ * ImageKit requires file as ReadStream, File, or toFile(Buffer) - raw Buffer is not accepted.
  * @param {object} params - Upload parameters
  * @param {Buffer} params.buffer - File buffer
  * @param {string} params.originalName - Original file name
@@ -17,40 +19,28 @@ export const uploadToImageKit = async ({
     folder,
     prefix,
 }) => {
-    if (!buffer) throw new Error("File buffer missing");
-
-    console.log("[uploadToImageKit] Start", {
-        originalName,
-        folder,
-        prefix,
-    });
+    if (!buffer || !Buffer.isBuffer(buffer)) throw new Error("File buffer missing or invalid");
 
     await ensureTempDir();
-    console.log("[uploadToImageKit] Temp directory ensured");
 
     const fileName = generateFileName(prefix, originalName);
-    console.log("[uploadToImageKit] Generated file name:", fileName);
 
     try {
         // Save to temp first
         const tempPath = await saveTempFile(buffer, fileName);
-        console.log("[uploadToImageKit] Temp file saved at:", tempPath);
+        console.log(`✅ Temp file saved: ${tempPath} (${(buffer.length / 1024 / 1024).toFixed(2)} MB)`);
 
         // Scan for viruses
-        console.log("[uploadToImageKit] Scanning file for viruses...");
         await scanFile(tempPath);
-        console.log("[uploadToImageKit] Virus scan completed");
+
+        // ImageKit expects ReadStream, File, or toFile(Buffer) - not raw Buffer
+        const fileForUpload = await toFile(buffer, fileName);
 
         // Upload to ImageKit
-        console.log("[uploadToImageKit] Uploading to ImageKit...");
         const uploadResponse = await imagekit.files.upload({
-            file: buffer,
+            file: fileForUpload,
             fileName,
             folder,
-        });
-        console.log("[uploadToImageKit] Upload to ImageKit success", {
-            fileId: uploadResponse.fileId,
-            url: uploadResponse.url,
         });
 
         return {
