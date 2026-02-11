@@ -1,0 +1,41 @@
+# ===== Dependencies =====
+node_modules/
+
+# ===== Build outputs =====
+dist/
+build/
+
+# ===== Environment files =====
+.env
+.env.*
+!.env.example
+
+# ===== Logs =====
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== OS generated =====
+.DS_Store
+Thumbs.db
+
+# ===== IDE & Editor =====
+.vscode/
+.idea/
+*.swp
+
+# ===== Cache & temp =====
+.tmp/
+temp/
+.cache/
+coverage/
+
+# ===== Optional lock (if you want clean repo) =====
+# package-lock.json
+# yarn.lock
+
+# ===== Misc =====
+secret_config.json
+*.bak
