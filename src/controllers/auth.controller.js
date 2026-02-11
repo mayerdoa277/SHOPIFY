@@ -31,6 +31,18 @@ const register = async (req, res) => {
         const cleanPassword = sanitizePassword(password);
         const cleanRole = sanitizeRole(role);
 
+        // Validate password length before hashing
+        if (cleanPassword.length < 6 || cleanPassword.length > 13) {
+            return res
+                .status(400)
+                .json(
+                    {
+                        success: false,
+                        message: "Password must be between 6 and 13 characters",
+                    }
+                )
+        };
+
 
         // Check if the user already exists
         const isUserExist = await userModel.findOne(
@@ -117,4 +129,86 @@ const register = async (req, res) => {
     }
 }
 
-export { register };
+const logIn = async (req, res) => {
+    // Destructure the request body to get email and password
+    const { email, password } = req.body || req.headers["authorization"].split(" ")[1];
+
+    // Check if email and password are provided
+    if (!email || !password) {
+        return res
+            .status(400)
+            .json(
+                {
+                    success: false,
+                    message: "Email and password are required",
+                }
+            );
+    }
+
+    // Sanitize inputs
+    const cleanEmail = sanitizeEmail(email);
+    const cleanPassword = sanitizePassword(password);
+
+    // Check if the user exists
+    const user = await userModel.findOne({
+        email: cleanEmail
+    }).select('+password');
+
+    if (!user) {
+        return res
+            .status(401)
+            .json(
+                {
+                    success: false,
+                    message: "Invalid email or password",
+                }
+            );
+    }
+
+    // Check if the password is correct
+    const isPasswordValid = await bcrypt.compare(cleanPassword, user.password);
+
+    if (!isPasswordValid) {
+        return res
+            .status(401)
+            .json(
+                {
+                    success: false,
+                    message: "Invalid email or password",
+                }
+            );
+    }
+
+    // generate JWT token
+    const token = jwt.sign({
+        id: user._id,
+        role: user.role
+    }, process.env.JWT_SECRET, { expiresIn: "7d" }
+    );
+
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days 
+    });
+
+    // send response
+    res
+        .status(200)
+        .json(
+            {
+                success: true,
+                message: "User logged in successfully",
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    role: user.role,
+                },
+                token
+            }
+        );
+};
+
+export { register, logIn };

@@ -12,21 +12,31 @@ function clean(input) {
 }
 
 /**
- * USERNAME
-   - 3 to 20 chars
-   - letters + numbers only
+ * USERNAME (Industry Standard)
+   - 3 to 30 chars
+   - letters, numbers, underscores, hyphens
+   - must start with letter
+   - no consecutive special chars
  */
 function sanitizeUsername(username) {
     const cleanUsername = clean(username)
         .replace(/\s+/g, "")
         .toLowerCase();
 
-    if (cleanUsername.length < 3 || cleanUsername.length > 20) {
-        throw new Error("Username must be between 3 and 20 characters");
+    if (cleanUsername.length < 3 || cleanUsername.length > 30) {
+        throw new Error("Username must be between 3 and 30 characters");
     }
 
-    if (!/^[a-z0-9]+$/.test(cleanUsername)) {
-        throw new Error("Username can only contain letters and numbers");
+    if (!/^[a-z]/.test(cleanUsername)) {
+        throw new Error("Username must start with a letter");
+    }
+
+    if (!/^[a-z][a-z0-9_-]*$/.test(cleanUsername)) {
+        throw new Error("Username can only contain letters, numbers, underscores, and hyphens");
+    }
+
+    if (/[_-]{2,}/.test(cleanUsername)) {
+        throw new Error("Username cannot contain consecutive special characters");
     }
 
     return cleanUsername;
@@ -67,8 +77,8 @@ function sanitizePassword(password) {
 
     const cleanPassword = password.trim();
 
-    if (cleanPassword.length < 8) {
-        throw new Error("Password must be at least 8 characters");
+    if (cleanPassword.length < 6 || cleanPassword.length > 13) {
+        throw new Error("Password must be between 6 and 13 characters");
     }
 
     if (!/[A-Z]/.test(cleanPassword)) {
