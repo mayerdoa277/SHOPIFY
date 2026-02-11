@@ -61,7 +61,7 @@ const register = async (req, res) => {
         const hashedPassword = await bcrypt.hash(cleanPassword, 10);
 
         // Create a new user
-        const user = new userModel(
+        const user = await userModel.create(
             {
                 username: cleanUsername,
                 email: cleanEmail,
@@ -69,6 +69,7 @@ const register = async (req, res) => {
                 role: cleanRole
             }
         );
+
 
         // generate JWT token
         const token = jwt.sign(
