@@ -1,6 +1,12 @@
-import userModel from "../models/user.model";
+import userModel from "../models/user.model.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import {
+    sanitizeUsername,
+    sanitizeEmail,
+    sanitizePassword,
+    sanitizeRole
+} from "../utils/sanitize.utils.js";
 
 const register = async (req, res) => {
     try {
@@ -19,61 +25,12 @@ const register = async (req, res) => {
                 )
         };
 
-        // Trim input values to remove extra spaces
-        const fixedUsername = username.trim()
-            .replace(/\s+/g, ''); // ex: "  John Doe  " => "JohnDoe"
+        // Sanitize inputs
+        const cleanUsername = sanitizeUsername(username);
+        const cleanEmail = sanitizeEmail(email);
+        const cleanPassword = sanitizePassword(password);
+        const cleanRole = sanitizeRole(role);
 
-        const fixedEmail = email.trim()
-            .replace(/\s+/g, '').toLowerCase(); // ex: "test @gmail.com " => "test@gmail.com"
-
-        const fixedRole = role.trim()
-            .replace(/\s+/g, ''); // ex: " artist " => "artist"
-
-        // Validate role
-        if (!["user", "artist"].includes(role)) {
-            return res
-                .status(400)
-                .json(
-                    {
-                        success: false,
-                        message: "Invalid role. Role must be either 'user' or 'artist'",
-                    }
-                )
-        };
-
-        // Sanitize inputs to prevent XSS attacks
-        const cleanUsername = fixedUsername.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        const cleanEmail = fixedEmail.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        const cleanPassword = password.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        const cleanRole = fixedRole.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-        // Validate password strength
-        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-
-        if (!passwordRegex.test(cleanPassword)) {
-            return res
-                .status(400)
-                .json(
-                    {
-                        success: false,
-                        message: "Password must be at least 8 characters long and contain both letters and numbers",
-                    }
-                )
-        };
-
-        // Check email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (!emailRegex.test(cleanEmail)) {
-            return res
-                .status(400)
-                .json(
-                    {
-                        success: false,
-                        message: "Invalid email format",
-                    }
-                )
-        };
 
         // Check if the user already exists
         const isUserExist = await userModel.findOne(
@@ -83,7 +40,7 @@ const register = async (req, res) => {
                         email: cleanEmail
                     },
                     {
-                        username: username
+                        username: cleanUsername
                     }
                 ]
             }
@@ -106,10 +63,10 @@ const register = async (req, res) => {
         // Create a new user
         const user = new userModel(
             {
-                username,
+                username: cleanUsername,
                 email: cleanEmail,
                 password: hashedPassword,
-                role: "user",
+                role: cleanRole
             }
         );
 
@@ -117,9 +74,10 @@ const register = async (req, res) => {
         const token = jwt.sign(
             {
                 id: user._id,
-                role: user.role,
+                role: user.role
             },
             process.env.JWT_SECRET,
+            { expiresIn: "7d" }
         );
 
         res.cookie("token", token, {
@@ -129,8 +87,7 @@ const register = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days 
         });
 
-        // save and send response
-        await user.save();
+        // send response
         res
             .status(201)
             .json(
@@ -158,3 +115,5 @@ const register = async (req, res) => {
             );
     }
 }
+
+export { register };

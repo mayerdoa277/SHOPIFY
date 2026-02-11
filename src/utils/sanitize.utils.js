@@ -100,6 +100,20 @@ function sanitizeRole(role) {
         throw new Error("Invalid role");
     }
 
+    if (role.trim() === "") {
+        throw new Error("Role cannot be empty");
+    }
+
+    if (!['user', 'artist'].includes(role)) {
+        return res
+            .status(400)
+            .json(
+                {
+                    success: false,
+                    message: "Invalid role. Role must be either 'user' or 'artist'",
+                }
+    }
+
     const cleanRole = role.trim().toLowerCase();
 
     if (!ALLOWED_ROLES.includes(cleanRole)) {
