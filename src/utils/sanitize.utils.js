@@ -112,6 +112,7 @@ function sanitizeRole(role) {
                     success: false,
                     message: "Invalid role. Role must be either 'user' or 'artist'",
                 }
+            );
     }
 
     const cleanRole = role.trim().toLowerCase();
