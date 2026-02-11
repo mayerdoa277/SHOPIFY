@@ -211,4 +211,31 @@ const logIn = async (req, res) => {
         );
 };
 
-export { register, logIn };
+const logOut = async (req, res) => {
+    res.clearCookie("token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+    });
+
+    res
+        .status(200)
+        .json(
+            {
+                success: true,
+                message: "User logged out successfully",
+            }
+        );
+}
+
+const getAllUsers = async (req, res) => {
+    try {
+        const users = await userModel.find().select("-password");
+        res.status(200).json({ success: true, users });
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+}
+
+export { register, logIn, logOut, getAllUsers };
