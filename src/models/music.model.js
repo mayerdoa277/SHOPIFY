@@ -2,6 +2,10 @@ import mongoose, { Schema, model } from "mongoose";
 
 const musicSchema = new Schema(
     {
+        image: {
+            type: String,
+            required: true,
+        },
         title: {
             type: String,
             required: true,
@@ -16,7 +20,8 @@ const musicSchema = new Schema(
             required: true,
         },
         album: {
-            type: String,
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Album",
         }
     },
     {
