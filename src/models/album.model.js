@@ -10,6 +10,7 @@ const albumSchema = new Schema(
             {
                 type: Schema.Types.ObjectId,
                 ref: "Music",
+                required: true,
             }
         ],
         coverImage: {
