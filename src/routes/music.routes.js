@@ -36,11 +36,11 @@ router.post( // Define a POST route on this router for handling uploads.
  * Get music list with query parameters
  * GET /api/music?page=1&limit=10&genre=rock&search=song
  */
-router.get('/', [
-    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-    query('genre').optional().isAlpha().withMessage('Genre must contain only letters'),
-    query('search').optional().isLength({ min: 2, max: 50 }).withMessage('Search term must be between 2 and 50 characters')
-], getAllUsers); // Replace with actual controller function
+// router.get('/', [
+//     query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+//     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+//     query('genre').optional().isAlpha().withMessage('Genre must contain only letters'),
+//     query('search').optional().isLength({ min: 2, max: 50 }).withMessage('Search term must be between 2 and 50 characters')
+// ], getAllUsers); // Replace with actual controller function
 
 export default router; // Export the configured router so it can be mounted onto the main Express app.

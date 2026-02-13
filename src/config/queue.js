@@ -46,7 +46,8 @@ uploadQueue.on("error", (error) => {
     console.error("Queue error:", error); // Log any queue-level error (e.g., command failure, connection issues).
 });
 
-uploadQueue.on("waiting", (jobId) => {
+uploadQueue.on("waiting", (job) => {
+    const jobId = job?.id || job || 'unknown';
     console.log(`Job ${jobId} is waiting to be processed`); // Log when a job is enqueued and waiting in the queue.
 });
 

@@ -146,17 +146,20 @@ worker.on("ready", () => {
 
 // Log whenever a job transitions into the "active" state, meaning processing has started.
 worker.on("active", (job) => {
-    console.log(`Job ${job.id} is now active - starting processing`); // Provide visibility into which job is currently being worked on.
+    const jobId = job?.id || job || 'unknown';
+    console.log(`Job ${jobId} is now active - starting processing`); // Provide visibility into which job is currently being worked on.
 });
 
 // Log when a job completes successfully, including the result object returned by the processor.
 worker.on("completed", (job, result) => {
-    console.log(`✅ Job ${job.id} completed successfully:`, result); // Confirm successful completion and show what data was returned.
+    const jobId = job?.id || job || 'unknown';
+    console.log(`✅ Job ${jobId} completed successfully:`, result); // Confirm successful completion and show what data was returned.
 });
 
 // Log when a job fails after processing, including the error message and error object for details.
 worker.on("failed", (job, err) => {
-    console.error(`❌ Job ${job.id} failed:`, err.message); // High-level failure message indicating the job ID and error reason.
+    const jobId = job?.id || job || 'unknown';
+    console.error(`❌ Job ${jobId} failed:`, err.message); // High-level failure message indicating the job ID and error reason.
     console.error("Error details:", err); // Dump the entire error object for more debugging context.
 });
 

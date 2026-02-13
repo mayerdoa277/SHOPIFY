@@ -5,6 +5,8 @@ import { scanFile, initClamscan } from "../utils/virus-scan.utils.js"; // Import
 
 initClamscan(); // Initialize the ClamAV scanner before any file uploads.
 
+
+
 /**
  * Upload file to ImageKit with virus scanning and temp backup
  * ImageKit requires file as ReadStream, File, or toFile(Buffer) - raw Buffer is not accepted.
