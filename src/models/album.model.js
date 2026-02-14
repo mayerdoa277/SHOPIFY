@@ -6,6 +6,10 @@ const albumSchema = new Schema(
             type: String,
             required: true,
         },
+        coverImage: {
+            type: String,
+            required: true,
+        },
         musics: [
             {
                 type: Schema.Types.ObjectId,
@@ -13,10 +17,6 @@ const albumSchema = new Schema(
                 required: true,
             }
         ],
-        coverImage: {
-            type: String,
-            required: true,
-        },
         artist: {
             type: Schema.Types.ObjectId,
             ref: "User",
@@ -27,6 +27,11 @@ const albumSchema = new Schema(
         timestamps: true,
     }
 );
+
+// Add indexes for better performance
+albumSchema.index({ artist: 1 });
+albumSchema.index({ title: "text" });
+albumSchema.index({ createdAt: -1 });
 
 const albumModel = model("Album", albumSchema);
 

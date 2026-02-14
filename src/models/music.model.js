@@ -20,14 +20,21 @@ const musicSchema = new Schema(
             required: true,
         },
         album: {
-            type: mongoose.Schema.Types.ObjectId,
+            type: [mongoose.Schema.Types.ObjectId],  // ✅ Array of albums
             ref: "Album",
+            default: []
         }
     },
     {
         timestamps: true,
     }
 );
+
+// Add indexes for better performance
+musicSchema.index({ artist: 1 });
+musicSchema.index({ album: 1 });
+musicSchema.index({ title: "text" });
+musicSchema.index({ createdAt: -1 });
 
 const musicModel = model("Music", musicSchema);
 

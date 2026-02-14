@@ -1,8 +1,10 @@
 import express from "express"; // Import Express to create a router instance for music-related endpoints.
-import { body, query } from "express-validator"; // Import express-validator for validation
+import { body } from "express-validator"; // Import express-validator for validation
 import { upload } from "../config/multer.config.js"; // Import the configured Multer instance that handles file uploads.
 import { uploadMusic } from "../controllers/music.controller.js"; // Import the controller function that enqueues music upload jobs.
-import { artistAuth } from "../middleware/auth.middleware.js"; // Import middleware that ensures only authenticated artists can access these routes.
+import { getAllMusics, getMusicById, updateMusic, getArtistMusic } from "../controllers/music.controller.js"; // Import the controller function that gets all musics.
+import { createAlbum, getAllAlbum, getArtistAlbum, deleteAlbum, getAlbumById, updateAlbum } from "../controllers/album.controller.js"; // Import the controller function that creates albums.
+import { artistAuth, userAuth, authenticateUser } from "../middleware/auth.middleware.js"; // Import middleware that ensures only authenticated artists can access these routes.
 
 const router = express.Router(); // Create a new router object for defining music routes.
 
@@ -33,14 +35,60 @@ router.post( // Define a POST route on this router for handling uploads.
 );
 
 /**
- * Get music list with query parameters
- * GET /api/music?page=1&limit=10&genre=rock&search=song
+ * Create album with existing music and/or new music files
+ * POST /api/music/createAlbum
+ * 
+ * Form data (recommended):
+ * Content-Type: multipart/form-data
+ * title: "Album Title"
+ * musics: ["music_id_1"] (optional, as JSON string for existing music)
+ * musics: [file1.mp3, file2.mp3] (optional, for new music uploads)
+ * coverImage: [cover.jpg] (required, uploaded from phone/PC)
  */
-// router.get('/', [
-//     query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-//     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-//     query('genre').optional().isAlpha().withMessage('Genre must contain only letters'),
-//     query('search').optional().isLength({ min: 2, max: 50 }).withMessage('Search term must be between 2 and 50 characters')
-// ], getAllUsers); // Replace with actual controller function
+router.post("/createAlbum", artistAuth, upload.fields([
+    { name: "coverImage", maxCount: 1 },
+    { name: "musics", maxCount: 10 }
+]), createAlbum); // Define a POST route on this router for creating albums. 
+
+// GET /api/music/
+// geting all musics
+router.get("/", getAllMusics); // Define a GET route on this router for getting all musics.
+
+// GET /api/music/albums
+// geting all albums (public access)
+router.get("/albums", getAllAlbum); // Define a GET route on this router for getting all albums.
+
+// GET /api/music/albums/:id
+// get album by id (public access for users, full access for artists/admins)
+router.get("/albums/:id", userAuth, getAlbumById); // Define a GET route for getting specific album by id (all authenticated users)
+
+// only artist can access this route
+// GET /api/music/artistAlbums
+// geting logged in artist albums
+router.get("/artistAlbums", artistAuth, getArtistAlbum); // Define a GET route on this router for getting artist albums.
+
+// GET /api/music/artistMusics
+// geting logged in artist musics (admin can access any artist)
+router.get("/artistMusics", artistAuth, getArtistMusic); // Define a GET route for getting artist musics.
+
+// GET /api/music/:id
+// get music by id (all authenticated users can access)
+router.get("/:id", getMusicById); // Define a GET route for getting specific music by id
+
+// PUT /api/music/:id
+// update music (admin can update any music)
+router.put("/:id", artistAuth, upload.fields([
+    { name: "image", maxCount: 1 }
+]), updateMusic); // Define a PUT route on this router for updating a music.
+
+// PUT /api/music/albums/:id
+// update album title and coverImage (artist can update own album, admin can update any album)
+router.put("/albums/:id", artistAuth, upload.fields([
+    { name: "coverImage", maxCount: 1 }
+]), updateAlbum); // Define a PUT route for updating albums (title and coverImage only)
+
+// DELETE /api/music/albums/:id
+// delete album (artist can delete own album, admin can delete any album)
+router.delete("/albums/:id", artistAuth, deleteAlbum); // Define a DELETE route for deleting albums.
 
 export default router; // Export the configured router so it can be mounted onto the main Express app.

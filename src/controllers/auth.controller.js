@@ -131,7 +131,7 @@ const register = async (req, res) => {
 
 const logIn = async (req, res) => {
     // Destructure the request body to get email and password
-    const { email, password } = req.body || req.headers["authorization"].split(" ")[1];
+    const { email, password } = req.body;
 
     // Check if email and password are provided
     if (!email || !password) {

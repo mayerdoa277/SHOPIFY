@@ -1,4 +1,7 @@
 import { uploadQueue } from "../config/queue.js"; // Import the BullMQ queue instance where new upload jobs will be enqueued.
+import musicModel from "../models/music.model.js";
+import userModel from "../models/user.model.js";
+import { uploadMusicImage } from "../service/upload.service.js"; // Import ImageKit upload service
 
 /**
  * Upload music with image to ImageKit and save to database (via background worker)
@@ -101,7 +104,195 @@ const uploadMusic = async (req, res) => { // Define an async Express handler for
     }
 };
 
+// get all Music from all artist for user dashboard
+const getAllMusics = async (_, res) => {
+    try {
+        const musics = await musicModel.find()
+            .populate("artist", "username email"); // Find all musics and populate the artist field with username and email.
+
+        return res.status(200).json({
+            success: true,
+            message: "fetch all musics successfully",
+            musics,
+        }); // Return the musics as a JSON response.    
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "fetch all musics failed: " + error.message,
+        });
+    }
+};
+
+// get any music by id (admin can access any, others can access all)
+const getMusicById = async (req, res) => {
+    try {
+        const user = req.user;
+        const musicId = req.params.id;
+
+        // Find music
+        const music = await musicModel.findById(musicId)
+            .populate("artist", "username email");
+
+        if (!music) {
+            return res.status(404).json({
+                success: false,
+                message: "Music not found",
+            });
+        }
+
+        // Admin can access any music, all other roles can access any music
+        return res.status(200).json({
+            success: true,
+            message: "fetch music successfully",
+            music,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "fetch music failed: " + error.message,
+        });
+    }
+}
+
+// get artist music (admin can access any artist's music)
+const getArtistMusic = async (req, res) => {
+    try {
+        const user = req.user;
+        const artistId = user.id || user._id || user.userId;
+
+        // Only allow artist and admin roles
+        if (user.role !== "artist" && user.role !== "admin") {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized - Artist or Admin access required",
+            });
+        }
+
+        // Admin can access any artist's music, artist can access own music
+        const targetArtistId = user.role === "admin" ? 
+            (req.query.artistId || artistId) : artistId;
+
+        const musics = await musicModel.find({ artist: targetArtistId });
+
+        return res.status(200).json({
+            success: true,
+            message: "fetch artist musics successfully",
+            musics,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "fetch artist musics failed: " + error.message,
+        });
+    }
+};
+
+// updateMusic - Admin full control version
+const updateMusic = async (req, res) => {
+    try {
+        const user = req.user;
+        const musicId = req.params.id;
+
+        // Step 1: Find music
+        const music = await musicModel.findById(musicId);
+        if (!music) {
+            return res.status(404).json({
+                success: false,
+                message: "Music not found",
+            });
+        }
+
+        // Step 2: Admin can update any music, artists can update own music
+        const userId = user.id || user._id || user.userId;
+
+        if (user.role === 'artist') {
+            // Artist can only update their own music
+            if (music.artist.toString() !== userId) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Forbidden - You can only update your own music",
+                });
+            }
+        }
+
+        // Step 3: Update music fields
+        const { title, album } = req.body;
+        
+        // Handle image upload (if file was uploaded)
+        if (req.files && req.files.image && req.files.image[0]) {
+            const imageFile = req.files.image[0];
+            // Use existing ImageKit upload service
+            const imageResult = await uploadMusicImage(
+                imageFile.buffer, 
+                `music-${music.title || 'updated'}-${Date.now()}.jpg`
+            );
+            
+            if (imageResult && imageResult.url) {
+                music.image = imageResult.url; // Use ImageKit URL
+                console.log(`✅ Image uploaded to ImageKit: ${imageResult.url}`);
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: "Failed to upload image to ImageKit",
+                });
+            }
+        }
+        
+        // Update text fields (only if provided)
+        if (title) music.title = title; // Only update title if it was provided in the request body
+
+        // Handle album updates (support single, multiple, or remove)
+        if (album !== undefined) {
+            if (album === null) {
+                music.album = [];  // Remove from all albums
+            } else if (Array.isArray(album)) {
+                music.album = album;  // Set multiple albums
+            } else {
+                music.album = [album];  // Convert single to array
+            }
+        }
+
+        // Step 4: Save and return (only validate fields that are being updated)
+        try {
+            await music.save();
+        } catch (validationError) {
+            // Handle validation errors for required fields
+            if (validationError.name === 'ValidationError') {
+                // If only updating title (no image), make image optional
+                if (title && !req.files?.image) {
+                    // Temporarily make image optional for this update
+                    const originalImage = music.image;
+                    await music.save({ validateBeforeSave: false });
+                    music.image = originalImage; // Restore original image
+                } else {
+                    throw validationError; // Re-throw other validation errors
+                }
+            } else {
+                throw validationError;
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Music updated successfully",
+            music,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Update failed: " + error.message,
+        });
+    }
+};
+
 // Export the upload controller so routes can attach it to endpoints.
 export {
     uploadMusic, // Export the asynchronous upload controller used in /api/music/upload.
+    getAllMusics,
+    getMusicById,
+    getArtistMusic,
+    updateMusic
 };
