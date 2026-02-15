@@ -212,20 +212,59 @@ const logIn = async (req, res) => {
 };
 
 const logOut = async (req, res) => {
-    res.clearCookie("token", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-    });
-
-    res
-        .status(200)
-        .json(
-            {
-                success: true,
-                message: "User logged out successfully",
+    try {
+        // Get user from token (if token exists)
+        const token = req.cookies.token;
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                const user = await userModel.findById(decoded.id);
+                
+                if (!user) {
+                    // User doesn't exist, clear cookie and return appropriate message
+                    res.clearCookie("token", {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === "production",
+                        sameSite: "strict",
+                    });
+                    
+                    return res.status(200).json({
+                        success: true,
+                        message: "Session cleared (user account no longer exists)",
+                    });
+                }
+            } catch (jwtError) {
+                // Invalid token, just clear cookie
+                console.log("Invalid token during logout:", jwtError);
             }
-        );
+        }
+
+        // Clear cookie regardless
+        res.clearCookie("token", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "User logged out successfully",
+        });
+    } catch (error) {
+        console.error("Error during logout:", error);
+        
+        // Still clear cookie even if there's an error
+        res.clearCookie("token", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+        });
+        
+        res.status(200).json({
+            success: true,
+            message: "Session cleared",
+        });
+    }
 }
 
 const getAllUsers = async (req, res) => {
@@ -238,4 +277,64 @@ const getAllUsers = async (req, res) => {
     }
 }
 
-export { register, logIn, logOut, getAllUsers };
+// get all user.role === "user"
+const getAllRegularUsers = async (req, res) => {
+    try {
+        const users = await userModel.find({ role: "user" }).select("-password");
+        res.status(200).json({ success: true, users });
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+}
+
+// get all user.role === "artist"
+const getAllArtists = async (req, res) => {
+    try {
+        const users = await userModel.find({ role: "artist" }).select("-password");
+        res.status(200).json({ success: true, users });
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+}
+
+// delete user Account "user"/"artist"
+const deleteUserAccount = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Check if user exists first
+        const existingUser = await userModel.findById(id);
+        if (!existingUser) {
+            return res.status(404)
+                .json({
+                    success: false,
+                    message: "User not found"
+                });
+        }
+        
+        const user = await userModel.findByIdAndDelete(id);
+
+        res.status(200)
+            .json({
+                success: true,
+                message: "User deleted successfully",
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    role: user.role
+                }
+            });
+    } catch (error) {
+        console.error("Error deleting user:", error);
+        res.status(500)
+            .json({
+                success: false,
+                message: "Failed to delete user"
+            });
+    }
+}
+
+export { register, logIn, logOut, getAllUsers, getAllRegularUsers, getAllArtists, deleteUserAccount };

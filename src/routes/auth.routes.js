@@ -1,7 +1,7 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { userAuth } from '../middleware/auth.middleware.js';
-import { register, logIn, logOut, getAllUsers } from '../controllers/auth.controller.js';
+import { userAuth, authenticateUser } from '../middleware/auth.middleware.js';
+import { register, logIn, logOut, getAllUsers, getAllRegularUsers, getAllArtists, deleteUserAccount } from '../controllers/auth.controller.js';
 
 const router = express.Router();
 
@@ -18,6 +18,10 @@ router.post('/login', [
 ], logIn);
 
 router.post('/logout', logOut);
-router.get('/users', userAuth, getAllUsers);
+router.get('/users', authenticateUser, getAllUsers);
+router.get('/artists', authenticateUser, getAllArtists);
+router.get('/regular-users', authenticateUser, getAllRegularUsers);
+router.delete('/delete-user/:id', authenticateUser, deleteUserAccount);
+
 
 export default router;
